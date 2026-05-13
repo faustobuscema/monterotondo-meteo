@@ -144,46 +144,76 @@ else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE
+# METEO ATTUALE + PREVISIONE (UI RESTYLING)
 # ==============================
-st.header("🌤️ Meteo Attuale e Previsione")
+st.header("🌤️ Situazione Meteo")
 
 current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon)
 
 if current:
-    col1, col2 = st.columns(2, gap="large")
+    # Definizione stile comune per i "Button Box"
+    box_style = """
+    <style>
+        .weather-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, background 0.3s ease;
+            margin-bottom: 20px;
+            min-height: 400px;
+        }
+        .weather-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .metric-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .forecast-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+    </style>
+    """
+    st.markdown(box_style, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("""
-        <div style="background: linear-gradient(145deg, #ffffff25, #ffffff10); 
-                    backdrop-filter: blur(12px); border-radius: 20px; padding: 25px; 
-                    border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
-            <h3 style="margin:0; color:white;">📍 Condizioni Attuali</h3>
-            <hr style="margin:15px 0;">
+        st.markdown(f"""
+        <div class="weather-card">
+            <h3 style="margin-top:0;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h3>
+            <div class="metric-container"><span>🌡️ Temperatura</span><strong>{current['temperatura']:.1f} °C</strong></div>
+            <div class="metric-container"><span>🤔 Percepita</span><strong>{current['percepita']:.1f} °C</strong></div>
+            <div class="metric-container"><span>💧 Umidità</span><strong>{current['umidità']:.0f} %</strong></div>
+            <div class="metric-container"><span>💨 Vento</span><strong>{current['vento']:.1f} km/h</strong></div>
+            <div class="metric-container"><span>☁️ Nuvolosità</span><strong>{current['nuvolosità']:.0f} %</strong></div>
+        </div>
         """, unsafe_allow_html=True)
-        st.metric("🌡️ Temperatura", f"{current['temperatura']:.1f} °C")
-        st.metric("🌡️ Percepita", f"{current['percepita']:.1f} °C")
-        st.metric("💧 Umidità", f"{current['umidità']:.0f} %")
-        st.metric("💨 Vento", f"{current['vento']:.1f} km/h")
-        st.metric("☁️ Nuvolosità", f"{current['nuvolosità']:.0f} %")
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
-        st.markdown("""
-        <div style="background: linear-gradient(145deg, #ffffff25, #ffffff10); 
-                    backdrop-filter: blur(12px); border-radius: 20px; padding: 25px; 
-                    border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
-            <h3 style="margin:0; color:white;">📅 Previsione 3 Giorni</h3>
-            <hr style="margin:15px 0;">
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="weather-card"><h3 style="margin-top:0;">📅 Prossimi 3 Giorni</h3>', unsafe_allow_html=True)
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
                 st.markdown(f"""
-                <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 14px; margin: 8px 0;">
-                    <strong>{row['data'].strftime('%A %d %b')}</strong> {emoji}<br>
-                    <span style="font-size:1.2em;">{row['tmin']:.1f}° / {row['tmax']:.1f}°C</span><br>
-                    <small>🌧️ {row['precip']:.1f} mm</small>
+                <div class="forecast-row">
+                    <div style="flex: 1;"><strong>{row['data'].strftime('%a %d')}</strong></div>
+                    <div style="flex: 1; text-align: center;">{emoji} {row['precip']:.1f}mm</div>
+                    <div style="flex: 1; text-align: right; font-family: monospace;">
+                        <span style="color: #ff4b4b;">{row['tmax']:.0f}°</span> / 
+                        <span style="color: #00acee;">{row['tmin']:.0f}°</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
