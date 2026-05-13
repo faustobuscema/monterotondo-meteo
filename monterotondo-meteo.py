@@ -144,66 +144,46 @@ else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE (UI RESTYLING)
-# ==============================
-# ==============================
-# METEO ATTUALE + PREVISIONE (STILE BOTTONE ENFATIZZATO)
+# METEO ATTUALE + PREVISIONE (FIX RENDERING)
 # ==============================
 st.header("🌤️ Situazione Meteo")
 
 current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon)
 
 if current:
-    # CSS per enfatizzare l'effetto "Bottone"
+    # 1. CSS migliorato per coerenza totale tra i due bottoni
     st.markdown("""
     <style>
         .weather-button-card {
-            background: rgba(255, 255, 255, 0.07);
+            background: rgba(255, 255, 255, 0.05); /* Sfondo coerente */
             border-radius: 20px;
-            padding: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            /* Ombra per effetto profondità */
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-            transition: all 0.2s ease-in-out;
-            margin-bottom: 25px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
             min-height: 380px;
-            display: flex;
-            flex-direction: column;
+            color: inherit;
         }
-        
-        /* Effetto hover (passaggio mouse) */
         .weather-button-card:hover {
+            background: rgba(255, 255, 255, 0.08);
             transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.4);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
         }
-
-        /* Effetto pressione (click simulato) */
-        .weather-button-card:active {
-            transform: translateY(2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
         .metric-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-
         .forecast-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
+            padding: 12px;
             margin: 8px 0;
-            background: rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
         .temp-high { color: #FF4B4B; font-weight: bold; }
         .temp-low { color: #00ACEE; font-weight: bold; }
     </style>
@@ -212,9 +192,10 @@ if current:
     col1, col2 = st.columns(2)
 
     with col1:
+        # Box Sinistra: Meteo Attuale
         st.markdown(f"""
         <div class="weather-button-card">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.5rem;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
+            <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
             <div class="metric-row"><span>🌡️ Temperatura</span><strong>{current['temperatura']:.1f} °C</strong></div>
             <div class="metric-row"><span>🤔 Percepita</span><strong>{current['percepita']:.1f} °C</strong></div>
             <div class="metric-row"><span>💧 Umidità</span><strong>{current['umidità']:.0f} %</strong></div>
@@ -224,23 +205,22 @@ if current:
         """, unsafe_allow_html=True)
 
     with col2:
-        # Creiamo prima la stringa delle righe di previsione
+        # Box Destra: Previsioni (Costruzione stringa pulita)
         items_html = ""
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
                 items_html += f"""
                 <div class="forecast-item">
-                    <span style="width: 80px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
+                    <span style="width: 85px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
                     <span>{emoji} {row['precip']:.1f}mm</span>
                     <span><span class="temp-high">{row['tmax']:.0f}°</span> / <span class="temp-low">{row['tmin']:.0f}°</span></span>
-                </div>
-                """
-        
-        # Ora passiamo tutto il blocco a st.markdown con unsafe_allow_html=True
+                </div>"""
+
+        # INIEZIONE UNICA: Questo evita che Streamlit mostri il codice
         st.markdown(f"""
         <div class="weather-button-card">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.5rem;">📅 Prossimi 3 Giorni</h2>
+            <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📅 Prossimi 3 Giorni</h2>
             {items_html}
         </div>
         """, unsafe_allow_html=True)
