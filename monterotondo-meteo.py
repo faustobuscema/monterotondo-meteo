@@ -146,77 +146,101 @@ else:
 # ==============================
 # METEO ATTUALE + PREVISIONE (UI RESTYLING)
 # ==============================
+# ==============================
+# METEO ATTUALE + PREVISIONE (STILE BOTTONE ENFATIZZATO)
+# ==============================
 st.header("🌤️ Situazione Meteo")
 
 current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon)
 
 if current:
-    # Definizione stile comune per i "Button Box"
-    box_style = """
+    # CSS per enfatizzare l'effetto "Bottone"
+    st.markdown("""
     <style>
-        .weather-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease, background 0.3s ease;
-            margin-bottom: 20px;
-            min-height: 400px;
+        .weather-button-card {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            /* Ombra per effetto profondità */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            transition: all 0.2s ease-in-out;
+            margin-bottom: 25px;
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
         }
-        .weather-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border: 3px solid rgba(255, 255, 255, 0.2);
+        
+        /* Effetto hover (passaggio mouse) */
+        .weather-button-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
         }
-        .metric-container {
+
+        /* Effetto pressione (click simulato) */
+        .weather-button-card:active {
+            transform: translateY(2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .metric-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
-            border-bottom: 3px solid rgba(255, 255, 255, 0.05);
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .forecast-row {
+
+        .forecast-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 12px;
-            margin-top: 10px;
+            padding: 15px;
+            margin: 8px 0;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
+        
+        .temp-high { color: #FF4B4B; font-weight: bold; }
+        .temp-low { color: #00ACEE; font-weight: bold; }
     </style>
-    """
-    st.markdown(box_style, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown(f"""
-        <div class="weather-card">
-            <h3 style="margin-top:0;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h3>
-            <div class="metric-container"><span>🌡️ Temperatura</span><strong>{current['temperatura']:.1f} °C</strong></div>
-            <div class="metric-container"><span>🤔 Percepita</span><strong>{current['percepita']:.1f} °C</strong></div>
-            <div class="metric-container"><span>💧 Umidità</span><strong>{current['umidità']:.0f} %</strong></div>
-            <div class="metric-container"><span>💨 Vento</span><strong>{current['vento']:.1f} km/h</strong></div>
-            <div class="metric-container"><span>☁️ Nuvolosità</span><strong>{current['nuvolosità']:.0f} %</strong></div>
+        <div class="weather-button-card">
+            <h2 style="margin: 0 0 20px 0; font-size: 1.5rem;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
+            <div class="metric-row"><span>🌡️ Temperatura</span><strong>{current['temperatura']:.1f} °C</strong></div>
+            <div class="metric-row"><span>🤔 Percepita</span><strong>{current['percepita']:.1f} °C</strong></div>
+            <div class="metric-row"><span>💧 Umidità</span><strong>{current['umidità']:.0f} %</strong></div>
+            <div class="metric-row"><span>💨 Vento</span><strong>{current['vento']:.1f} km/h</strong></div>
+            <div class="metric-row" style="border:none;"><span>☁️ Nuvolosità</span><strong>{current['nuvolosità']:.0f} %</strong></div>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="weather-card"><h3 style="margin-top:0;">📅 Prossimi 3 Giorni</h3>', unsafe_allow_html=True)
+        # Tutto il contenuto delle previsioni ora è DENTRO un'unica card weather-button-card
+        forecast_html = f"""
+        <div class="weather-button-card">
+            <h2 style="margin: 0 0 20px 0; font-size: 1.5rem;">📅 Prossimi 3 Giorni</h2>
+        """
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
-                st.markdown(f"""
-                <div class="forecast-row">
-                    <div style="flex: 1;"><strong>{row['data'].strftime('%a %d')}</strong></div>
-                    <div style="flex: 1; text-align: center;">{emoji} {row['precip']:.1f}mm</div>
-                    <div style="flex: 1; text-align: right; font-family: monospace;">
-                        <span style="color: #ff4b4b;">{row['tmax']:.0f}°</span> / 
-                        <span style="color: #00acee;">{row['tmin']:.0f}°</span>
-                    </div>
+                forecast_html += f"""
+                <div class="forecast-item">
+                    <span style="width: 80px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
+                    <span>{emoji} {row['precip']:.1f}mm</span>
+                    <span><span class="temp-high">{row['tmax']:.0f}°</span> / <span class="temp-low">{row['tmin']:.0f}°</span></span>
                 </div>
-                """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+                """
+        forecast_html += "</div>"
+        st.markdown(forecast_html, unsafe_allow_html=True)
 
 # ==============================
 # ANALISI STORICHE
