@@ -75,8 +75,9 @@ def geocode_city(city_name):
         return None, None, None, None
 
 # ------------------------------
-# Funzione meteo attuale + previsione (versione debug)
+# Funzione meteo attuale + previsione 3 giorni
 # ------------------------------
+
 def get_weather_forecast(lat, lon):
     try:
         client = get_openmeteo_client()
@@ -97,7 +98,7 @@ def get_weather_forecast(lat, lon):
         responses = client.weather_api(url, params=params)
         response = responses[0]
         
-        # Dati attuali
+        # ==================== DATI ATTUALI ====================
         current = response.Current()
         current_data = {
             "temperatura": current.Variables(0).Value(),
@@ -110,12 +111,14 @@ def get_weather_forecast(lat, lon):
             "vento": current.Variables(7).Value(),
         }
         
-        # Previsione giornaliera
+        # ==================== PREVISIONE 3 GIORNI ====================
         daily = response.Daily()
+        
+        # Creazione dataframe più sicura
         daily_data = pd.DataFrame({
             "data": pd.date_range(
                 start=pd.to_datetime(daily.Time(), unit="s", utc=True),
-                end=pd.to_datetime(daily.TimeEnd(), unit="s", utc=True),
+                periods=len(daily.Variables(0).ValuesAsNumpy()),  # Usa la lunghezza reale
                 freq=pd.Timedelta(seconds=daily.Interval())
             ).tz_convert("Europe/Rome").date,
             "tmax": daily.Variables(0).ValuesAsNumpy(),
@@ -127,7 +130,7 @@ def get_weather_forecast(lat, lon):
         
     except Exception as e:
         st.error(f"❌ Errore durante il recupero dei dati meteo: {str(e)}")
-        st.info("Prova a cambiare città o riprova tra qualche secondo.")
+        st.info("🔄 Prova a cambiare città o riprova tra qualche secondo.")
         return None, None
 
 # ==============================
