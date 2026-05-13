@@ -5,3 +5,6 @@ altair
 requests
 datetime
 fastparquet
+openmeteo-requests
+requests-cache
+retry-requests
