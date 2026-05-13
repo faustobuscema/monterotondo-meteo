@@ -25,24 +25,42 @@ def get_openmeteo_client():
     return openmeteo_requests.Client(session=retry_session)
 
 # ------------------------------
-# Caricamento dati storici
+# Caricamento e preparazione dati
 # ------------------------------
 @st.cache_data(ttl=3600)
 def load_data():
     try:
         df = pd.read_parquet("dati_meteo.parquet")
         st.sidebar.success("✅ Dati storici caricati da Parquet")
-        for col in df.select_dtypes(include=['float64']).columns:
-            df[col] = pd.to_numeric(df[col], downcast='float')
-        for col in df.select_dtypes(include=['int64']).columns:
-            df[col] = pd.to_numeric(df[col], downcast='integer')
-        return df
+        return prepare_dataframe(df)
     except Exception as e:
-        st.error(f"❌ Errore caricamento dati: {e}")
+        st.error(f"❌ Errore caricamento Parquet: {e}")
         st.stop()
 
+def prepare_dataframe(df):
+    """Prepara il dataframe (usato sia per Parquet che per CSV)"""
+    df['time'] = pd.to_datetime(df['time'])
+    df.set_index('time', inplace=True)
+    
+    df.rename(columns={
+        'temperature_2m': 'temperatura',
+        'relative_humidity_2m': 'umidità',
+        'precipitation': 'precipitazione',
+        'windspeed_10m': 'vento',
+        'cloudcover': 'nuvolosità',
+        'pressure_msl': 'pressione',
+        'shortwave_radiation': 'radiazione'
+    }, inplace=True, errors='ignore')
+    
+    # Ottimizzazione memoria
+    for col in df.select_dtypes(include=['float64']).columns:
+        df[col] = pd.to_numeric(df[col], downcast='float')
+    for col in df.select_dtypes(include=['int64']).columns:
+        df[col] = pd.to_numeric(df[col], downcast='integer')
+    return df
+
 # ------------------------------
-# Funzioni
+# Funzioni meteo
 # ------------------------------
 def geocode_city(city_name):
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=it"
@@ -119,13 +137,14 @@ st.sidebar.header("📂 Dati storici")
 csv_file = st.sidebar.file_uploader("Carica CSV (opzionale)", type=["csv"])
 
 if csv_file is not None:
-    df = pd.read_csv(csv_file)
-    st.sidebar.success("✅ CSV caricato")
+    df_raw = pd.read_csv(csv_file)
+    df = prepare_dataframe(df_raw)
+    st.sidebar.success("✅ CSV caricato e preparato")
 else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE (2 BOX)
+# METEO ATTUALE + PREVISIONE
 # ==============================
 st.header("🌤️ Meteo Attuale e Previsione")
 
@@ -170,7 +189,7 @@ if current:
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ==============================
-# ANALISI STORICHE COMPLETE
+# ANALISI STORICHE
 # ==============================
 st.header("📊 Analisi storiche a Monterotondo (2000–2025)")
 
@@ -201,7 +220,7 @@ with col1:
 with col2:
     st.metric(f"Precip. totale {last_year}", f"{df_last['precipitazione'].sum():.0f} mm")
 
-# 1. Andamento temperature
+# Grafici completi
 st.subheader("Andamento temperature (minime e massime giornaliere)")
 df_daily = df_filtered.resample('D').agg({'temperatura': ['min', 'max']}).dropna()
 if not df_daily.empty:
@@ -218,7 +237,6 @@ if not df_daily.empty:
     ).properties(height=420)
     st.altair_chart(chart_temp, use_container_width=True)
 
-# 2. Precipitazioni mensili
 st.subheader("Precipitazioni totali per mese")
 df_prec = df_filtered.groupby(['anno', 'mese'])['precipitazione'].sum().reset_index()
 chart_prec = alt.Chart(df_prec).mark_bar().encode(
@@ -226,26 +244,21 @@ chart_prec = alt.Chart(df_prec).mark_bar().encode(
 ).properties(height=300)
 st.altair_chart(chart_prec, use_container_width=True)
 
-# 3. Matrice di correlazione
-st.subheader("Matrice di correlazione tra variabili")
+st.subheader("Matrice di correlazione")
 corr_vars = ['temperatura', 'umidità', 'precipitazione', 'vento', 'nuvolosità', 'pressione']
 existing_vars = [v for v in corr_vars if v in df_filtered.columns]
-
 if len(existing_vars) >= 2:
     corr_matrix = df_filtered[existing_vars].corr().stack().reset_index()
     corr_matrix.columns = ['var1', 'var2', 'correlazione']
-    
     heatmap = alt.Chart(corr_matrix).mark_rect().encode(
         x='var1:O', y='var2:O',
-        color=alt.Color('correlazione:Q', scale=alt.Scale(scheme='redblue', domain=[-1, 1]))
-    ).properties(width=500, height=500)
-    
+        color=alt.Color('correlazione:Q', scale=alt.Scale(scheme='redblue', domain=[-1,1]))
+    ).properties(width=550, height=550)
     text = alt.Chart(corr_matrix).mark_text().encode(
         x='var1:O', y='var2:O', text=alt.Text('correlazione:Q', format='.2f')
     )
     st.altair_chart(heatmap + text, use_container_width=True)
 
-# 4. Dati grezzi
 st.subheader("Dati grezzi (ultimi 1000 record)")
 st.dataframe(df_filtered.tail(1000), use_container_width=True)
 
