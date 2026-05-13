@@ -150,7 +150,7 @@ else:
 # ==============================
 # ANALISI STORICHE
 # ==============================
-st.header("📊 Analisi storiche (2000–2025)")
+st.header("📊 Analisi storiche a Monterotondo -RM- periodo 2000–2025")
 
 years = sorted(df.index.year.unique())
 default_years = [y for y in [2024, 2025] if y in years]
