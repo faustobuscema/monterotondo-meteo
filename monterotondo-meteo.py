@@ -181,19 +181,34 @@ with col2:
 
 # ==================== GRAFICI ====================
 
+# ==================== Andamento temperature ====================
 st.subheader("Andamento temperature (minime e massime giornaliere)")
+
 df_daily = df_filtered.resample('D').agg({'temperatura': ['min', 'max']}).dropna()
+
 if not df_daily.empty:
     df_daily.columns = ['temp_min', 'temp_max']
     df_daily = df_daily.reset_index()
+    
+    # ←←← AGGIUNTA IMPORTANTE: ripristiniamo l'anno
+    df_daily['anno'] = df_daily['time'].dt.year.astype(str)
+    
     chart_temp = alt.Chart(df_daily).mark_bar(opacity=0.7).encode(
         x=alt.X('monthdate(time):O', title='Data'),
         y=alt.Y('temp_max:Q', title='Temperatura (°C)'),
-        y2='temp_min:Q',
-        color=alt.Color('anno:N', title='Anno'),
-        tooltip=['time', 'temp_min', 'temp_max']
-    ).properties(height=400)
+        y2=alt.Y2('temp_min:Q'),
+        color=alt.Color('anno:N', title='Anno', scale=alt.Scale(scheme='category')),
+        tooltip=[
+            alt.Tooltip('time:T', title='Data', format='%d %b %Y'),
+            alt.Tooltip('temp_max:Q', title='Max (°C)'),
+            alt.Tooltip('temp_min:Q', title='Min (°C)'),
+            alt.Tooltip('anno:N', title='Anno')
+        ]
+    ).properties(height=420)
+    
     st.altair_chart(chart_temp, use_container_width=True)
+else:
+    st.info("Dati insufficienti per il grafico delle temperature.")
 
 # Distribuzione nuvolosità
 st.subheader("Distribuzione della nuvolosità")
