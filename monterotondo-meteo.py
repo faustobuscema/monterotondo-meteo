@@ -74,23 +74,30 @@ def geocode_city(city_name):
     except:
         return None, None, None, None
 
+# ------------------------------
+# Funzione meteo attuale + previsione (versione debug)
+# ------------------------------
 def get_weather_forecast(lat, lon):
-    client = get_openmeteo_client()
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": ["temperature_2m", "apparent_temperature", "relative_humidity_2m", 
-                   "precipitation", "rain", "showers", "cloud_cover", "wind_speed_10m", "weather_code"],
-        "daily": ["weather_code", "temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
-        "timezone": "Europe/Rome",
-        "forecast_days": 3
-    }
-    
     try:
+        client = get_openmeteo_client()
+        url = "https://api.open-meteo.com/v1/forecast"
+        
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "current": [
+                "temperature_2m", "apparent_temperature", "relative_humidity_2m",
+                "precipitation", "rain", "showers", "cloud_cover", "wind_speed_10m"
+            ],
+            "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
+            "timezone": "Europe/Rome",
+            "forecast_days": 3
+        }
+        
         responses = client.weather_api(url, params=params)
         response = responses[0]
         
+        # Dati attuali
         current = response.Current()
         current_data = {
             "temperatura": current.Variables(0).Value(),
@@ -103,6 +110,7 @@ def get_weather_forecast(lat, lon):
             "vento": current.Variables(7).Value(),
         }
         
+        # Previsione giornaliera
         daily = response.Daily()
         daily_data = pd.DataFrame({
             "data": pd.date_range(
@@ -110,13 +118,16 @@ def get_weather_forecast(lat, lon):
                 end=pd.to_datetime(daily.TimeEnd(), unit="s", utc=True),
                 freq=pd.Timedelta(seconds=daily.Interval())
             ).tz_convert("Europe/Rome").date,
-            "tmax": daily.Variables(1).ValuesAsNumpy(),
-            "tmin": daily.Variables(2).ValuesAsNumpy(),
-            "precip": daily.Variables(3).ValuesAsNumpy()
+            "tmax": daily.Variables(0).ValuesAsNumpy(),
+            "tmin": daily.Variables(1).ValuesAsNumpy(),
+            "precip": daily.Variables(2).ValuesAsNumpy()
         })
         
         return current_data, daily_data
-    except:
+        
+    except Exception as e:
+        st.error(f"❌ Errore durante il recupero dei dati meteo: {str(e)}")
+        st.info("Prova a cambiare città o riprova tra qualche secondo.")
         return None, None
 
 # ==============================
