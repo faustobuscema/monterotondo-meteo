@@ -224,23 +224,26 @@ if current:
         """, unsafe_allow_html=True)
 
     with col2:
-        # Tutto il contenuto delle previsioni ora è DENTRO un'unica card weather-button-card
-        forecast_html = f"""
-        <div class="weather-button-card">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.5rem;">📅 Prossimi 3 Giorni</h2>
-        """
+        # Creiamo prima la stringa delle righe di previsione
+        items_html = ""
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
-                forecast_html += f"""
+                items_html += f"""
                 <div class="forecast-item">
                     <span style="width: 80px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
                     <span>{emoji} {row['precip']:.1f}mm</span>
                     <span><span class="temp-high">{row['tmax']:.0f}°</span> / <span class="temp-low">{row['tmin']:.0f}°</span></span>
                 </div>
                 """
-        forecast_html += "</div>"
-        st.markdown(forecast_html, unsafe_allow_html=True)
+        
+        # Ora passiamo tutto il blocco a st.markdown con unsafe_allow_html=True
+        st.markdown(f"""
+        <div class="weather-button-card">
+            <h2 style="margin: 0 0 20px 0; font-size: 1.5rem;">📅 Prossimi 3 Giorni</h2>
+            {items_html}
+        </div>
+        """, unsafe_allow_html=True)
 
 # ==============================
 # ANALISI STORICHE
