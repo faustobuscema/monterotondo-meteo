@@ -144,30 +144,30 @@ else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE (FIX RENDERING)
+# METEO ATTUALE + PREVISIONE (FIX DEFINITIVO)
 # ==============================
 st.header("🌤️ Situazione Meteo")
 
 current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon)
 
 if current:
-    # 1. CSS migliorato per coerenza totale tra i due bottoni
+    # 1. Definizione CSS (unica per entrambi)
     st.markdown("""
     <style>
         .weather-button-card {
-            background: rgba(255, 255, 255, 0.05); /* Sfondo coerente */
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 20px;
             padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
             min-height: 380px;
-            color: inherit;
+            margin-bottom: 20px;
         }
         .weather-button-card:hover {
             background: rgba(255, 255, 255, 0.08);
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-color: rgba(255, 255, 255, 0.3);
         }
         .metric-row {
             display: flex;
@@ -175,14 +175,15 @@ if current:
             padding: 12px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .forecast-item {
+        .forecast-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px;
             margin: 8px 0;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.1);
             border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
         }
         .temp-high { color: #FF4B4B; font-weight: bold; }
         .temp-low { color: #00ACEE; font-weight: bold; }
@@ -191,8 +192,8 @@ if current:
 
     col1, col2 = st.columns(2)
 
+    # --- BOX 1: METEO ATTUALE ---
     with col1:
-        # Box Sinistra: Meteo Attuale
         st.markdown(f"""
         <div class="weather-button-card">
             <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
@@ -204,26 +205,31 @@ if current:
         </div>
         """, unsafe_allow_html=True)
 
+    # --- BOX 2: PREVISIONI (Costruzione stringa e iniezione unica) ---
     with col2:
-        # Box Destra: Previsioni (Costruzione stringa pulita)
-        items_html = ""
+        # Costruiamo il contenuto interno prima
+        inner_forecast_html = ""
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
-                items_html += f"""
-                <div class="forecast-item">
-                    <span style="width: 85px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
+                inner_forecast_html += f"""
+                <div class="forecast-row">
+                    <span style="width: 80px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
                     <span>{emoji} {row['precip']:.1f}mm</span>
                     <span><span class="temp-high">{row['tmax']:.0f}°</span> / <span class="temp-low">{row['tmin']:.0f}°</span></span>
-                </div>"""
-
-        # INIEZIONE UNICA: Questo evita che Streamlit mostri il codice
-        st.markdown(f"""
+                </div>
+                """
+        
+        # Ora creiamo l'intero box come un'unica stringa Markdown
+        full_box_2_html = f"""
         <div class="weather-button-card">
             <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📅 Prossimi 3 Giorni</h2>
-            {items_html}
+            {inner_forecast_html}
         </div>
-        """, unsafe_allow_html=True)
+        """
+        
+        # Unica chiamata per il box di destra
+        st.markdown(full_box_2_html, unsafe_allow_html=True)
 
 # ==============================
 # ANALISI STORICHE
