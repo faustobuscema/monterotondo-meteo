@@ -144,90 +144,60 @@ else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE (SEPARATED MARKDOWN)
+# METEO ATTUALE + PREVISIONE (STRICT HTML)
 # ==============================
 st.header("🌤️ Situazione Meteo")
 
 current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon)
 
 if current:
-    # 1. CSS (rimane unico per mantenere lo stile coerente)
+    # CSS ottimizzato per la responsività (flex-wrap)
     st.markdown("""
     <style>
-        .weather-button-card {
+        .main-container { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; }
+        .weather-card {
+            flex: 1; min-width: 300px;
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 25px;
+            border-radius: 20px; padding: 25px;
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            min-height: 380px;
-            margin-bottom: 20px;
         }
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .forecast-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            margin: 8px 0;
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 12px;
-        }
-        .temp-high { color: #FF4B4B; font-weight: bold; }
-        .temp-low { color: #00ACEE; font-weight: bold; }
+        .row-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .forecast-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 8px 0; background: rgba(0,0,0,0.1); border-radius: 12px; }
     </style>
     """, unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 
-    # --- BOX 1: METEO ATTUALE ---
     with col1:
-        st.markdown(f"""
-        <div class="weather-button-card">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
-            <div class="metric-row"><span>🌡️ Temperatura</span><strong>{current['temperatura']:.1f} °C</strong></div>
-            <div class="metric-row"><span>🤔 Percepita</span><strong>{current['percepita']:.1f} °C</strong></div>
-            <div class="metric-row"><span>💧 Umidità</span><strong>{current['umidità']:.0f} %</strong></div>
-            <div class="metric-row"><span>💨 Vento</span><strong>{current['vento']:.1f} km/h</strong></div>
-            <div class="metric-row" style="border:none;"><span>☁️ Nuvolosità</span><strong>{current['nuvolosità']:.0f} %</strong></div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Box 1: Costruito come stringa singola senza a capo per evitare bug di rendering
+        html_1 = f"""<div class="weather-card">
+<h2 style="margin:0 0 20px 0; font-size:1.4rem;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
+<div class="row-item"><span>🌡️ Temp.</span><strong>{current['temperatura']:.1f} °C</strong></div>
+<div class="row-item"><span>🤔 Perc.</span><strong>{current['percepita']:.1f} °C</strong></div>
+<div class="row-item"><span>💧 Umid.</span><strong>{current['umidità']:.0f} %</strong></div>
+<div class="row-item"><span>💨 Vento</span><strong>{current['vento']:.1f} km/h</strong></div>
+<div class="row-item" style="border:none;"><span>☁️ Nuvole</span><strong>{current['nuvolosità']:.0f} %</strong></div>
+</div>"""
+        st.markdown(html_1, unsafe_allow_html=True)
 
-    # --- BOX 2: PREVISIONI (Markdown creato separatamente) ---
     with col2:
-        # Creiamo una lista per accumulare i frammenti HTML
-        forecast_items = []
-        
+        # Box 2: Generazione riga per riga e rimozione forzata degli a capo
+        forecast_rows = ""
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
-                # Creiamo la singola riga
-                item = f"""
-                <div class="forecast-row">
-                    <span style="width: 80px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
-                    <span>{emoji} {row['precip']:.1f}mm</span>
-                    <span>
-                        <span style="color: #FF4B4B; font-weight: bold;">{row['tmax']:.0f}°</span> / 
-                        <span style="color: #00ACEE; font-weight: bold;">{row['tmin']:.0f}°</span>
-                    </span>
-                </div>
-                """
-                forecast_items.append(item)
-
-        # Uniamo tutto in una stringa finale e inseriamola nel contenitore principale
-        all_forecasts_html = "".join(forecast_items)
+                forecast_rows += f'<div class="forecast-row">' \
+                                 f'<span><strong>{row["data"].strftime("%a %d")}</strong></span>' \
+                                 f'<span>{emoji} {row["precip"]:.1f}mm</span>' \
+                                 f'<span><b style="color:#FF4B4B">{row["tmax"]:.0f}°</b> / <b style="color:#00ACEE">{row["tmin"]:.0f}°</b></span>' \
+                                 f'</div>'
         
-        st.markdown(f"""
-        <div class="weather-button-card">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📅 Prossimi 3 Giorni</h2>
-            {all_forecasts_html}
-        </div>
-        """, unsafe_allow_html=True)
+        html_2 = f'<div class="weather-card">' \
+                 f'<h2 style="margin:0 0 20px 0; font-size:1.4rem;">📅 Prossimi 3 Giorni</h2>' \
+                 f'{forecast_rows}</div>'
+        
+        st.markdown(html_2, unsafe_allow_html=True)
 
 # ==============================
 # ANALISI STORICHE
