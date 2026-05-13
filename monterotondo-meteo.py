@@ -165,14 +165,14 @@ if current:
         }
         .weather-card:hover {
             background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.2);
         }
         .metric-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 3px solid rgba(255, 255, 255, 0.05);
         }
         .forecast-row {
             display: flex;
