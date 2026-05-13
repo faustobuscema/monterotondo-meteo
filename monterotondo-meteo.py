@@ -144,35 +144,61 @@ else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE (STRICT HTML)
+# METEO ATTUALE + PREVISIONE (ANIMATED BUTTONS)
 # ==============================
 st.header("🌤️ Situazione Meteo")
 
 current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon)
 
 if current:
-    # CSS ottimizzato per la responsività (flex-wrap)
+    # CSS con Animazioni e Transizioni
     st.markdown("""
     <style>
-        .main-container { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; }
         .weather-card {
-            flex: 1; min-width: 300px;
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px; padding: 25px;
+            border-radius: 20px;
+            padding: 25px;
             border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            
+            /* Animazione base */
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            margin-bottom: 20px;
+            min-height: 380px;
         }
+
+        /* Effetto Sollevamento al passaggio (Hover) */
+        .weather-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        /* Effetto Pressione al click (Active) */
+        .weather-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            transition: all 0.1s;
+        }
+
         .row-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .forecast-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 8px 0; background: rgba(0,0,0,0.1); border-radius: 12px; }
+        .forecast-row { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 10px; margin: 8px 0; background: rgba(0,0,0,0.1); border-radius: 12px;
+            transition: background 0.3s;
+        }
+        .forecast-row:hover { background: rgba(255,255,255,0.1); }
     </style>
     """, unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 
     with col1:
-        # Box 1: Costruito come stringa singola senza a capo per evitare bug di rendering
+        # Box 1: Meteo Attuale (Stringa compatta per evitare bug di rendering)
         html_1 = f"""<div class="weather-card">
-<h2 style="margin:0 0 20px 0; font-size:1.4rem;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
+<h2 style="margin:0 0 20px 0; font-size:1.4rem; color:white;">📍 Ora a {st.session_state.city_name.split(',')[0]}</h2>
 <div class="row-item"><span>🌡️ Temp.</span><strong>{current['temperatura']:.1f} °C</strong></div>
 <div class="row-item"><span>🤔 Perc.</span><strong>{current['percepita']:.1f} °C</strong></div>
 <div class="row-item"><span>💧 Umid.</span><strong>{current['umidità']:.0f} %</strong></div>
@@ -182,7 +208,7 @@ if current:
         st.markdown(html_1, unsafe_allow_html=True)
 
     with col2:
-        # Box 2: Generazione riga per riga e rimozione forzata degli a capo
+        # Box 2: Previsioni (Stringa compatta)
         forecast_rows = ""
         if daily is not None:
             for _, row in daily.iterrows():
@@ -194,7 +220,7 @@ if current:
                                  f'</div>'
         
         html_2 = f'<div class="weather-card">' \
-                 f'<h2 style="margin:0 0 20px 0; font-size:1.4rem;">📅 Prossimi 3 Giorni</h2>' \
+                 f'<h2 style="margin:0 0 20px 0; font-size:1.4rem; color:white;">📅 Prossimi 3 Giorni</h2>' \
                  f'{forecast_rows}</div>'
         
         st.markdown(html_2, unsafe_allow_html=True)
