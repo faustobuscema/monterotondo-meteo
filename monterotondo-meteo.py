@@ -144,14 +144,14 @@ else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE (FIX DEFINITIVO)
+# METEO ATTUALE + PREVISIONE (SEPARATED MARKDOWN)
 # ==============================
 st.header("🌤️ Situazione Meteo")
 
 current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon)
 
 if current:
-    # 1. Definizione CSS (unica per entrambi)
+    # 1. CSS (rimane unico per mantenere lo stile coerente)
     st.markdown("""
     <style>
         .weather-button-card {
@@ -160,14 +160,8 @@ if current:
             padding: 25px;
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
             min-height: 380px;
             margin-bottom: 20px;
-        }
-        .weather-button-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-5px);
-            border-color: rgba(255, 255, 255, 0.3);
         }
         .metric-row {
             display: flex;
@@ -181,9 +175,8 @@ if current:
             align-items: center;
             padding: 12px;
             margin: 8px 0;
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.15);
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
         }
         .temp-high { color: #FF4B4B; font-weight: bold; }
         .temp-low { color: #00ACEE; font-weight: bold; }
@@ -205,14 +198,17 @@ if current:
         </div>
         """, unsafe_allow_html=True)
 
-    # --- BOX 2: PREVISIONI (Costruzione stringa e iniezione unica) ---
+    # --- BOX 2: PREVISIONI (Markdown creato separatamente) ---
     with col2:
-        # Costruiamo il contenuto interno prima
-        inner_forecast_html = ""
+        # Iniziamo la stringa del box
+        box2_html = f'<div class="weather-button-card">'
+        box2_html += f'<h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📅 Prossimi 3 Giorni</h2>'
+        
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
-                inner_forecast_html += f"""
+                # Aggiungiamo ogni riga alla stringa
+                box2_html += f"""
                 <div class="forecast-row">
                     <span style="width: 80px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
                     <span>{emoji} {row['precip']:.1f}mm</span>
@@ -220,16 +216,11 @@ if current:
                 </div>
                 """
         
-        # Ora creiamo l'intero box come un'unica stringa Markdown
-        full_box_2_html = f"""
-        <div class="weather-button-card">
-            <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📅 Prossimi 3 Giorni</h2>
-            {inner_forecast_html}
-        </div>
-        """
+        # Chiudiamo il div del box
+        box2_html += '</div>'
         
-        # Unica chiamata per il box di destra
-        st.markdown(full_box_2_html, unsafe_allow_html=True)
+        # Eseguiamo il markdown dedicato per il secondo box
+        st.markdown(box2_html, unsafe_allow_html=True)
 
 # ==============================
 # ANALISI STORICHE
