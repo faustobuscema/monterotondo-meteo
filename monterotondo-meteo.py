@@ -28,7 +28,7 @@ def get_openmeteo_client():
     return openmeteo_requests.Client(session=retry_session)
 
 # ------------------------------
-# Caricamento dati storici (Parquet)
+# Caricamento dati storici
 # ------------------------------
 @st.cache_data(ttl=3600)
 def load_data():
@@ -41,26 +41,13 @@ def load_data():
             df[col] = pd.to_numeric(df[col], downcast='float')
         for col in df.select_dtypes(include=['int64']).columns:
             df[col] = pd.to_numeric(df[col], downcast='integer')
+        return df
     except Exception as e:
         st.error(f"❌ Errore caricamento Parquet: {e}")
         st.stop()
-    
-    df['time'] = pd.to_datetime(df['time'])
-    df.set_index('time', inplace=True)
-    
-    df.rename(columns={
-        'temperature_2m': 'temperatura',
-        'relative_humidity_2m': 'umidità',
-        'precipitation': 'precipitazione',
-        'windspeed_10m': 'vento',
-        'cloudcover': 'nuvolosità',
-        'pressure_msl': 'pressione',
-        'shortwave_radiation': 'radiazione'
-    }, inplace=True, errors='ignore')
-    return df
 
 # ------------------------------
-# Funzioni di supporto
+# Funzioni supporto
 # ------------------------------
 def geocode_city(city_name):
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=it"
@@ -73,64 +60,49 @@ def geocode_city(city_name):
     except:
         return None, None, None, None
 
-# ------------------------------
-# Funzione meteo attuale + previsione
-# ------------------------------
 def get_weather_forecast(lat, lon):
     try:
         client = get_openmeteo_client()
         url = "https://api.open-meteo.com/v1/forecast"
-        
         params = {
-            "latitude": lat,
-            "longitude": lon,
+            "latitude": lat, "longitude": lon,
             "current": ["temperature_2m", "apparent_temperature", "relative_humidity_2m",
                        "precipitation", "rain", "showers", "cloud_cover", "wind_speed_10m"],
             "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum"],
-            "timezone": "Europe/Rome",
-            "forecast_days": 3
+            "timezone": "Europe/Rome", "forecast_days": 3
         }
         
         responses = client.weather_api(url, params=params)
         response = responses[0]
         
-        # Dati attuali
         current = response.Current()
         current_data = {
             "temperatura": current.Variables(0).Value(),
             "percepita": current.Variables(1).Value(),
             "umidità": current.Variables(2).Value(),
             "precipitazione": current.Variables(3).Value(),
-            "pioggia": current.Variables(4).Value(),
-            "rovesci": current.Variables(5).Value(),
             "nuvolosità": current.Variables(6).Value(),
             "vento": current.Variables(7).Value(),
         }
         
-        # Previsione 3 giorni
         daily = response.Daily()
         daily_data = pd.DataFrame({
-            "data": pd.date_range(
-                start=pd.to_datetime(daily.Time(), unit="s", utc=True),
-                periods=len(daily.Variables(0).ValuesAsNumpy()),
-                freq=pd.Timedelta(seconds=daily.Interval())
-            ).tz_convert("Europe/Rome").date,
+            "data": pd.date_range(start=pd.to_datetime(daily.Time(), unit="s", utc=True),
+                                  periods=len(daily.Variables(0).ValuesAsNumpy()),
+                                  freq=pd.Timedelta(seconds=daily.Interval())).tz_convert("Europe/Rome").date,
             "tmax": daily.Variables(0).ValuesAsNumpy(),
             "tmin": daily.Variables(1).ValuesAsNumpy(),
             "precip": daily.Variables(2).ValuesAsNumpy()
         })
-        
         return current_data, daily_data
-        
     except Exception as e:
         st.error(f"❌ Errore meteo: {str(e)}")
         return None, None
 
 # ==============================
-# SIDEBAR (prima di tutto!)
+# SIDEBAR
 # ==============================
 st.sidebar.header("🌍 Meteo in tempo reale")
-
 city = st.sidebar.text_input("Nome città italiana", value="Monterotondo")
 
 if st.sidebar.button("🔍 Cerca città"):
@@ -139,9 +111,7 @@ if st.sidebar.button("🔍 Cerca città"):
         st.session_state.lat = lat
         st.session_state.lon = lon
         st.session_state.city_name = f"{city_name}, {country}"
-        st.sidebar.success("✅ Città trovata!")
-    else:
-        st.sidebar.error("Città non trovata")
+        st.rerun()
 
 if "lat" not in st.session_state:
     st.session_state.lat = 42.056747
@@ -151,18 +121,17 @@ if "lat" not in st.session_state:
 st.sidebar.write(f"📍 **{st.session_state.city_name}**")
 st.sidebar.write(f"Lat: {st.session_state.lat:.4f} | Lon: {st.session_state.lon:.4f}")
 
-# Dati storici
 st.sidebar.header("📂 Dati storici")
 csv_file = st.sidebar.file_uploader("Carica CSV (opzionale)", type=["csv"])
 
 if csv_file is not None:
     df = pd.read_csv(csv_file)
-    st.sidebar.success("✅ CSV caricato dall'utente")
+    st.sidebar.success("✅ CSV caricato")
 else:
     df = load_data()
 
 # ==============================
-# METEO ATTUALE + PREVISIONE (con glassmorphism)
+# METEO ATTUALE + PREVISIONE
 # ==============================
 st.header("🌤️ Meteo Attuale e Previsione")
 
@@ -171,15 +140,14 @@ current, daily = get_weather_forecast(st.session_state.lat, st.session_state.lon
 if current:
     col1, col2 = st.columns(2, gap="large")
     
+    # Box 1 - Condizioni Attuali (stile card/bottone)
     with col1:
         st.markdown("""
-        <div style="background: rgba(255, 255, 255, 0.18); 
-                    backdrop-filter: blur(12px); 
-                    border-radius: 16px; 
-                    padding: 22px; 
-                    border: 1px solid rgba(255, 255, 255, 0.25);">
+        <div style="background: linear-gradient(145deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
+                    backdrop-filter: blur(12px); border-radius: 20px; padding: 24px;
+                    border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
             <h3 style="margin:0; color:white;">📍 Condizioni Attuali</h3>
-            <hr style="margin:12px 0;">
+            <hr style="margin:15px 0;">
         """, unsafe_allow_html=True)
         
         st.metric("🌡️ Temperatura", f"{current['temperatura']:.1f} °C")
@@ -190,45 +158,38 @@ if current:
         
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # Box 2 - Previsione 3 Giorni
     with col2:
         st.markdown("""
-        <div style="background: rgba(255, 255, 255, 0.18); 
-                    backdrop-filter: blur(12px); 
-                    border-radius: 16px; 
-                    padding: 22px; 
-                    border: 1px solid rgba(255, 255, 255, 0.25);">
+        <div style="background: linear-gradient(145deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
+                    backdrop-filter: blur(12px); border-radius: 20px; padding: 24px;
+                    border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
             <h3 style="margin:0; color:white;">📅 Previsione 3 Giorni</h3>
-            <hr style="margin:12px 0;">
+            <hr style="margin:15px 0;">
         """, unsafe_allow_html=True)
         
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
                 st.markdown(f"""
-                <div style="background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px; margin: 8px 0;">
+                <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 14px; margin: 10px 0;">
                     <strong>{row['data'].strftime('%A %d %b')}</strong> {emoji}<br>
-                    <span style="font-size:1.15em;">{row['tmin']:.1f}° / {row['tmax']:.1f}°C</span><br>
+                    <span style="font-size:1.2em;">{row['tmin']:.1f}° / {row['tmax']:.1f}°C</span><br>
                     <small>🌧️ {row['precip']:.1f} mm</small>
                 </div>
                 """, unsafe_allow_html=True)
-        
         st.markdown("</div>", unsafe_allow_html=True)
-else:
-    st.error("Impossibile recuperare i dati meteo.")
 
 # ==============================
 # ANALISI STORICHE
 # ==============================
-st.header("📊 Analisi storiche a Monterotondo -RM- (2000–2025)")
+st.header("📊 Analisi storiche a Monterotondo (2000–2025)")
 
 years = sorted(df.index.year.unique())
 default_years = [y for y in [2024, 2025] if y in years]
 
-selected_years = st.multiselect(
-    "Seleziona anni da confrontare",
-    years,
-    default=default_years if default_years else years[-3:]
-)
+selected_years = st.multiselect("Seleziona anni da confrontare", years, 
+                               default=default_years if default_years else years[-3:])
 
 if not selected_years:
     st.warning("Seleziona almeno un anno")
@@ -248,8 +209,21 @@ with col1:
 with col2:
     st.metric(f"Precip. totale {last_year}", f"{df_last['precipitazione'].sum():.0f} mm")
 
-# Grafici...
+# Grafico Temperature
 st.subheader("Andamento temperature (minime e massime giornaliere)")
-# (inserisci qui il resto dei grafici se vuoi)
+df_daily = df_filtered.resample('D').agg({'temperatura': ['min', 'max']}).dropna()
+if not df_daily.empty:
+    df_daily.columns = ['temp_min', 'temp_max']
+    df_daily = df_daily.reset_index()
+    df_daily['anno'] = df_daily['time'].dt.year.astype(str)
+    
+    chart_temp = alt.Chart(df_daily).mark_bar(opacity=0.75).encode(
+        x=alt.X('monthdate(time):O', title='Data'),
+        y=alt.Y('temp_max:Q', title='Temperatura (°C)'),
+        y2=alt.Y2('temp_min:Q'),
+        color=alt.Color('anno:N', title='Anno'),
+        tooltip=['time', 'temp_max', 'temp_min', 'anno']
+    ).properties(height=420)
+    st.altair_chart(chart_temp, use_container_width=True)
 
 st.caption("Fonte: Open-Meteo | Dati storici in Parquet")
