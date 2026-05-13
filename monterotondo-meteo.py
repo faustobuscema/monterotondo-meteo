@@ -10,7 +10,7 @@ from datetime import datetime
 # Configurazione pagina
 # ------------------------------
 st.set_page_config(
-    page_title="Meteo Italia 2000-2025 + Tempo Reale",
+    page_title="Monterotondo (RM) Meteo",
     page_icon="🌦️",
     layout="wide"
 )
