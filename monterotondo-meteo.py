@@ -200,27 +200,34 @@ if current:
 
     # --- BOX 2: PREVISIONI (Markdown creato separatamente) ---
     with col2:
-        # Iniziamo la stringa del box
-        box2_html = f'<div class="weather-button-card">'
-        box2_html += f'<h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📅 Prossimi 3 Giorni</h2>'
+        # Creiamo una lista per accumulare i frammenti HTML
+        forecast_items = []
         
         if daily is not None:
             for _, row in daily.iterrows():
                 emoji = "🌧️" if row['precip'] > 1 else "☀️"
-                # Aggiungiamo ogni riga alla stringa
-                box2_html += f"""
+                # Creiamo la singola riga
+                item = f"""
                 <div class="forecast-row">
                     <span style="width: 80px;"><strong>{row['data'].strftime('%a %d')}</strong></span>
                     <span>{emoji} {row['precip']:.1f}mm</span>
-                    <span><span class="temp-high">{row['tmax']:.0f}°</span> / <span class="temp-low">{row['tmin']:.0f}°</span></span>
+                    <span>
+                        <span style="color: #FF4B4B; font-weight: bold;">{row['tmax']:.0f}°</span> / 
+                        <span style="color: #00ACEE; font-weight: bold;">{row['tmin']:.0f}°</span>
+                    </span>
                 </div>
                 """
+                forecast_items.append(item)
+
+        # Uniamo tutto in una stringa finale e inseriamola nel contenitore principale
+        all_forecasts_html = "".join(forecast_items)
         
-        # Chiudiamo il div del box
-        box2_html += '</div>'
-        
-        # Eseguiamo il markdown dedicato per il secondo box
-        st.markdown(box2_html, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="weather-button-card">
+            <h2 style="margin: 0 0 20px 0; font-size: 1.4rem;">📅 Prossimi 3 Giorni</h2>
+            {all_forecasts_html}
+        </div>
+        """, unsafe_allow_html=True)
 
 # ==============================
 # ANALISI STORICHE
