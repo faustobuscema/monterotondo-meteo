@@ -180,7 +180,6 @@ with col2:
     st.metric(f"Precipitazione totale {last_year}", f"{df_last['precipitazione'].sum():.0f} mm")
 
 # ==================== GRAFICI ====================
-
 # ==================== Andamento temperature ====================
 st.subheader("Andamento temperature (minime e massime giornaliere)")
 
@@ -189,15 +188,13 @@ df_daily = df_filtered.resample('D').agg({'temperatura': ['min', 'max']}).dropna
 if not df_daily.empty:
     df_daily.columns = ['temp_min', 'temp_max']
     df_daily = df_daily.reset_index()
+    df_daily['anno'] = df_daily['time'].dt.year.astype(str)   # importante per la legenda
     
-    # ←←← AGGIUNTA IMPORTANTE: ripristiniamo l'anno
-    df_daily['anno'] = df_daily['time'].dt.year.astype(str)
-    
-    chart_temp = alt.Chart(df_daily).mark_bar(opacity=0.7).encode(
+    chart_temp = alt.Chart(df_daily).mark_bar(opacity=0.75).encode(
         x=alt.X('monthdate(time):O', title='Data'),
         y=alt.Y('temp_max:Q', title='Temperatura (°C)'),
         y2=alt.Y2('temp_min:Q'),
-        color=alt.Color('anno:N', title='Anno', scale=alt.Scale(scheme='category')),
+        color=alt.Color('anno:N', title='Anno'),        # ← semplificato
         tooltip=[
             alt.Tooltip('time:T', title='Data', format='%d %b %Y'),
             alt.Tooltip('temp_max:Q', title='Max (°C)'),
