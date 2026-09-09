@@ -351,9 +351,13 @@ if 'precipitazione' in df_filtered.columns:
 
     st.altair_chart(chart_prec)
 
-st.subheader("📋 Tabelle Dettaglio Giornaliero a Confronto")
+st.subheader("📋 Confronto Giornaliero con 6 Caselle di Ricerca")
 
-def get_yearly_table(df_y):
+def get_day_summary(df_y, m, d):
+    df_day = df_y[(df_y.index.month == m) & (df_y.index.day == d)]
+    if df_day.empty:
+        return None
+    
     agg_dict = {'temperatura': ['min', 'max']}
     if 'precipitazione' in df_y.columns:
         agg_dict['precipitazione'] = 'sum'
@@ -362,7 +366,7 @@ def get_yearly_table(df_y):
     if 'umidità' in df_y.columns:
         agg_dict['umidità'] = 'mean'
 
-    df_t = df_y.resample('D').agg(agg_dict)
+    df_t = df_day.resample('D').agg(agg_dict)
     if isinstance(df_t.columns, pd.MultiIndex):
         df_t.columns = ['_'.join(col).strip() for col in df_t.columns.values]
 
@@ -373,48 +377,58 @@ def get_yearly_table(df_y):
         'vento_mean': 'Vento Medio (km/h)',
         'umidità_mean': 'Umidità Media (%)'
     }
-    df_t = df_t.rename(columns=rename_cols).reset_index()
-    df_t = df_t.sort_values(by='time', ascending=False)
+    df_t = df_t.rename(columns=rename_cols).reset_index(drop=True)
     
-    # Arrotondamento a 1 cifra decimale per vento e umidità
     if 'Vento Medio (km/h)' in df_t.columns:
         df_t['Vento Medio (km/h)'] = df_t['Vento Medio (km/h)'].round(1)
     if 'Umidità Media (%)' in df_t.columns:
         df_t['Umidità Media (%)'] = df_t['Umidità Media (%)'].round(1)
 
-    df_t['Data'] = df_t['time'].dt.strftime('%d-%m-%Y')
+    return df_t
 
-    cols_to_show = ['Data', 'Temp Min (°C)', 'Temp Max (°C)']
-    if 'Precipitazioni (mm)' in df_t.columns:
-        cols_to_show.append('Precipitazioni (mm)')
-    if 'Vento Medio (km/h)' in df_t.columns:
-        cols_to_show.append('Vento Medio (km/h)')
-    if 'Umidità Media (%)' in df_t.columns:
-        cols_to_show.append('Umidità Media (%)')
+# Creazione delle due colonne affiancate per le tabelle di confronto
+tcol1, tcol2 = st.columns(2)
 
-    return df_t[cols_to_show]
+month_options = {
+    1: "Gennaio", 2: "Febbraio", 3: "Marzo", 4: "Aprile", 5: "Maggio", 6: "Giugno",
+    7: "Luglio", 8: "Agosto", 9: "Settembre", 10: "Ottobre", 11: "Novembre", 12: "Dicembre"
+}
 
-# Mostra tabelle affiancate se ci sono almeno 2 anni selezionati
-comparison_years = sorted(selected_years)[-2:] if len(selected_years) >= 2 else selected_years
+with tcol1:
+    st.markdown("#### Tabella Sinistra")
+    sc1, sc2, sc3 = st.columns(3)
+    default_y1 = years[0] if len(years) > 0 else 2020
+    with sc1:
+        y1 = st.selectbox("Anno (1)", years, index=years.index(default_y1) if default_y1 in years else 0, key="y1")
+    with sc2:
+        m1 = st.selectbox("Mese (1)", list(month_options.keys()), format_func=lambda x: month_options[x], index=5, key="m1") # Default Giugno (6)
+    with sc3:
+        d1 = st.number_input("Giorno (1)", min_value=1, max_value=31, value=21, key="d1")
 
-if len(comparison_years) == 2:
-    tcol1, tcol2 = st.columns(2)
-    y1, y2 = comparison_years
-    
-    with tcol1:
-        st.markdown(f"**Anno {y1}**")
-        df_y1 = df_filtered[df_filtered['anno'] == y1]
-        st.dataframe(get_yearly_table(df_y1), use_container_width=True, hide_index=True)
-        
-    with tcol2:
-        st.markdown(f"**Anno {y2}**")
-        df_y2 = df_filtered[df_filtered['anno'] == y2]
-        st.dataframe(get_yearly_table(df_y2), use_container_width=True, hide_index=True)
-else:
-    y1 = comparison_years[0]
-    st.markdown(f"**Anno {y1}**")
-    df_y1 = df_filtered[df_filtered['anno'] == y1]
-    st.dataframe(get_yearly_table(df_y1), use_container_width=True, hide_index=True)
+    df_y1 = df[df.index.year == y1]
+    res_y1 = get_day_summary(df_y1, m1, d1)
+    if res_y1 is not None and not res_y1.empty:
+        st.dataframe(res_y1, use_container_width=True, hide_index=True)
+    else:
+        st.info(f"Nessun dato trovato per il {d1:02d}/{m1:02d}/{y1}")
+
+with tcol2:
+    st.markdown("#### Tabella Destra")
+    sc4, sc5, sc6 = st.columns(3)
+    default_y2 = years[-1] if len(years) > 0 else 2026
+    with sc4:
+        y2 = st.selectbox("Anno (2)", years, index=years.index(default_y2) if default_y2 in years else 0, key="y2")
+    with sc5:
+        m2 = st.selectbox("Mese (2)", list(month_options.keys()), format_func=lambda x: month_options[x], index=5, key="m2") # Default Giugno (6)
+    with sc6:
+        d2 = st.number_input("Giorno (2)", min_value=1, max_value=31, value=21, key="d2")
+
+    df_y2 = df[df.index.year == y2]
+    res_y2 = get_day_summary(df_y2, m2, d2)
+    if res_y2 is not None and not res_y2.empty:
+        st.dataframe(res_y2, use_container_width=True, hide_index=True)
+    else:
+        st.info(f"Nessun dato trovato per il {d2:02d}/{m2:02d}/{y2}")
 
 with st.expander("🔍 Visualizza Matrice di Correlazione Avanzata"):
     corr_vars = ['temperatura', 'umidità', 'precipitazione', 'vento', 'nuvolosità', 'pressione']
